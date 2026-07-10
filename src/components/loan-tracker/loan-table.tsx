@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -19,7 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,6 +92,8 @@ export default function LoanTable({ onEdit, onPayment, onDelete, onReceipt }: Lo
   const [dueDateFilter, setDueDateFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('dueDate');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const enrichedLoans = useMemo(() => {
     return loans.map((l) => getEnrichedLoan(l));
@@ -172,7 +182,39 @@ export default function LoanTable({ onEdit, onPayment, onDelete, onReceipt }: Lo
     window.open(`https://wa.me/${loan.contact.replace(/\D/g, '')}?text=${encoded}`, '_blank');
   };
 
+  const totalPages = Math.max(1, Math.ceil(filteredLoans.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedLoans = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredLoans.slice(start, start + pageSize);
+  }, [filteredLoans, safePage, pageSize]);
+
+  const rangeStart = filteredLoans.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(safePage * pageSize, filteredLoans.length);
+
+  // Reset to page 1 when filters or page size change
+  const updateStatusFilter = useCallback((v: string) => { setStatusFilter(v); setCurrentPage(1); }, []);
+  const updateDueDateFilter = useCallback((v: string) => { setDueDateFilter(v); setCurrentPage(1); }, []);
+  const updateSearch = useCallback((v: string) => { setSearch(v); setCurrentPage(1); }, []);
+  const updatePageSize = useCallback((v: number) => { setPageSize(v); setCurrentPage(1); }, []);
+
   const hasActiveFilters = search || statusFilter !== 'all' || dueDateFilter !== 'all';
+
+  // Build page numbers for pagination (show first, last, and window around current)
+  const getPageNumbers = (): (number | 'ellipsis')[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages: (number | 'ellipsis')[] = [1];
+    if (safePage > 3) pages.push('ellipsis');
+    const start = Math.max(2, safePage - 1);
+    const end = Math.min(totalPages - 1, safePage + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (safePage < totalPages - 2) pages.push('ellipsis');
+    pages.push(totalPages);
+    return pages;
+  };
 
   return (
     <div className="space-y-3">
@@ -182,13 +224,13 @@ export default function LoanTable({ onEdit, onPayment, onDelete, onReceipt }: Lo
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => updateSearch(e.target.value)}
             placeholder="Search by name or contact..."
             className="pl-9 bg-surface border-border text-foreground placeholder:text-zinc-600 text-sm"
           />
           {search && (
             <button
-              onClick={() => setSearch('')}
+              onClick={() => updateSearch('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-foreground"
             >
               <X className="w-3 h-3" />
@@ -196,7 +238,7 @@ export default function LoanTable({ onEdit, onPayment, onDelete, onReceipt }: Lo
           )}
         </div>
         <div className="flex gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={updateStatusFilter}>
             <SelectTrigger className="w-[130px] bg-surface border-border text-foreground text-sm">
               <Filter className="w-3 h-3 mr-1 text-zinc-500" />
               <SelectValue placeholder="Status" />
@@ -208,7 +250,7 @@ export default function LoanTable({ onEdit, onPayment, onDelete, onReceipt }: Lo
               <SelectItem value="paid">Paid</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={dueDateFilter} onValueChange={setDueDateFilter}>
+          <Select value={dueDateFilter} onValueChange={updateDueDateFilter}>
             <SelectTrigger className="w-[140px] bg-surface border-border text-foreground text-sm">
               <SelectValue placeholder="Due Date" />
             </SelectTrigger>
@@ -222,15 +264,32 @@ export default function LoanTable({ onEdit, onPayment, onDelete, onReceipt }: Lo
         </div>
       </div>
 
-      {hasActiveFilters && (
-        <p className="text-xs text-zinc-500">
-          Showing {filteredLoans.length} of {enrichedLoans.length} loans
-        </p>
+      {(hasActiveFilters || filteredLoans.length > pageSize) && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-zinc-500">
+            {hasActiveFilters
+              ? `Showing ${rangeStart}–${rangeEnd} of ${filteredLoans.length} filtered (${enrichedLoans.length} total)`
+              : `Showing ${rangeStart}–${rangeEnd} of ${filteredLoans.length} loans`}
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-500">Per page</span>
+            <Select value={String(pageSize)} onValueChange={(v) => updatePageSize(Number(v))}>
+              <SelectTrigger className="w-[60px] h-7 bg-surface border-border text-foreground text-xs px-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border">
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       )}
 
       {/* Table */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <ScrollArea className="max-h-[60vh]">
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
@@ -273,7 +332,7 @@ export default function LoanTable({ onEdit, onPayment, onDelete, onReceipt }: Lo
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLoans.map((loan) => (
+                paginatedLoans.map((loan) => (
                   <TableRow
                     key={loan.id}
                     className="border-border hover:bg-surface/50 transition-colors group"
@@ -366,8 +425,52 @@ export default function LoanTable({ onEdit, onPayment, onDelete, onReceipt }: Lo
               )}
             </TableBody>
           </Table>
-        </ScrollArea>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className={safePage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer hover:bg-surface hover:text-foreground'}
+                tabIndex={safePage <= 1 ? -1 : 0}
+                aria-disabled={safePage <= 1}
+              />
+            </PaginationItem>
+            {getPageNumbers().map((page, idx) =>
+              page === 'ellipsis' ? (
+                <PaginationItem key={`el-${idx}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    onClick={() => setCurrentPage(page)}
+                    isActive={page === safePage}
+                    className={
+                      page === safePage
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer'
+                        : 'cursor-pointer hover:bg-surface hover:text-foreground'
+                    }
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            )}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className={safePage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer hover:bg-surface hover:text-foreground'}
+                tabIndex={safePage >= totalPages ? -1 : 0}
+                aria-disabled={safePage >= totalPages}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 }
