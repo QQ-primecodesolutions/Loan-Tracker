@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: "Loan Tracker — 50% Interest Manager",
   description: "Track loans with 50% interest. Monitor payments, generate receipts, and send reminders.",
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/favicon.svg",
   },
 };
 
