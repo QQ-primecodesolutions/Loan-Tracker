@@ -110,6 +110,7 @@ export const useLoanStore = create<LoanStore>()((set, get) => ({
         body: JSON.stringify({ lateFeeEnabled: enabled }),
       });
       set({ lateFeeEnabled: result.lateFeeEnabled, loans: result.loans });
+      toast.success(result.lateFeeEnabled ? 'Late fees enabled' : 'Late fees disabled');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update late fee setting');
     }
@@ -122,6 +123,7 @@ export const useLoanStore = create<LoanStore>()((set, get) => ({
         body: JSON.stringify(loan),
       });
       set((state) => ({ loans: [created, ...state.loans] }));
+      toast.success('Loan added');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add loan');
     }
@@ -134,6 +136,7 @@ export const useLoanStore = create<LoanStore>()((set, get) => ({
         body: JSON.stringify(data),
       });
       set((state) => ({ loans: state.loans.map((l) => (l.id === id ? updated : l)) }));
+      toast.success('Loan updated');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update loan');
     }
@@ -143,6 +146,7 @@ export const useLoanStore = create<LoanStore>()((set, get) => ({
     try {
       await apiFetch(`/api/loans/${id}`, { method: 'DELETE' });
       set((state) => ({ loans: state.loans.filter((l) => l.id !== id) }));
+      toast.success('Loan deleted');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete loan');
     }
@@ -155,6 +159,7 @@ export const useLoanStore = create<LoanStore>()((set, get) => ({
         body: JSON.stringify(payment),
       });
       set((state) => ({ loans: state.loans.map((l) => (l.id === loanId ? updated : l)) }));
+      toast.success('Payment recorded');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to record payment');
     }
@@ -166,6 +171,7 @@ export const useLoanStore = create<LoanStore>()((set, get) => ({
         method: 'DELETE',
       });
       set((state) => ({ loans: state.loans.map((l) => (l.id === loanId ? updated : l)) }));
+      toast.success('Payment deleted');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete payment');
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -182,8 +182,14 @@ export default function Home() {
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editLoan, setEditLoan] = useState<EnrichedLoan | null>(null);
-  const [paymentLoan, setPaymentLoan] = useState<EnrichedLoan | null>(null);
+  const [paymentLoanId, setPaymentLoanId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EnrichedLoan | null>(null);
+
+  const paymentLoan = useMemo(() => {
+    if (!paymentLoanId) return null;
+    const loan = loans.find((l) => l.id === paymentLoanId);
+    return loan ? getEnrichedLoan(loan) : null;
+  }, [loans, paymentLoanId, getEnrichedLoan]);
 
   const handleEdit = useCallback((loan: EnrichedLoan) => {
     setEditLoan(loan);
@@ -314,7 +320,7 @@ export default function Home() {
         {/* Loan Table */}
         <LoanTable
           onEdit={handleEdit}
-          onPayment={setPaymentLoan}
+          onPayment={(loan) => setPaymentLoanId(loan.id)}
           onDelete={handleDelete}
           onReceipt={handleReceipt}
         />
@@ -324,7 +330,7 @@ export default function Home() {
       <footer className="sticky bottom-0 mt-auto border-t border-border bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <p className="text-[10px] text-zinc-600">Loan Tracker · 50% Interest Manager</p>
-          <p className="text-[10px] text-zinc-600">Data saved locally</p>
+          <p className="text-[10px] text-zinc-600">Developed by PrimeCode</p>
         </div>
       </footer>
 
@@ -341,7 +347,7 @@ export default function Home() {
       <PaymentDialog
         open={!!paymentLoan}
         onOpenChange={(open) => {
-          if (!open) setPaymentLoan(null);
+          if (!open) setPaymentLoanId(null);
         }}
         loan={paymentLoan}
       />

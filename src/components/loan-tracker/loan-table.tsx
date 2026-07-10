@@ -384,7 +384,7 @@ export default function LoanTable({ onEdit, onPayment, onDelete, onReceipt }: Lo
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-8 w-8 p-0"
                           >
                             <MoreHorizontal className="w-4 h-4 text-zinc-400" />
                           </Button>

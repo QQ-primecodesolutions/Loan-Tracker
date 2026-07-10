@@ -93,8 +93,6 @@ export default function LoginScreen() {
             </Button>
           </form>
         </div>
-
-        <p className="text-center text-xs text-zinc-600 mt-6">Default password (unless APP_PASSWORD is set): loan2024</p>
       </div>
     </div>
   );
