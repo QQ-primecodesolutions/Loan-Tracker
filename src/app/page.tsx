@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -171,6 +171,8 @@ function exportToCSV(loans: EnrichedLoan[]) {
 
 export default function Home() {
   const isAuthenticated = useLoanStore((s) => s.isAuthenticated);
+  const authChecked = useLoanStore((s) => s.authChecked);
+  const init = useLoanStore((s) => s.init);
   const logout = useLoanStore((s) => s.logout);
   const loans = useLoanStore((s) => s.loans);
   const lateFeeEnabled = useLoanStore((s) => s.lateFeeEnabled);
@@ -212,6 +214,18 @@ export default function Home() {
     const enrichedLoans = loans.map((l) => getEnrichedLoan(l));
     exportToCSV(enrichedLoans);
   }, [loans, getEnrichedLoan]);
+
+  useEffect(() => {
+    init();
+  }, [init]);
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <LoginScreen />;

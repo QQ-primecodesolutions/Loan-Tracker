@@ -1,27 +1,26 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { Lock, Eye, EyeOff, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLoanStore } from '@/lib/loan-store';
 
-const emptySubscribe = () => () => {};
-const getSnapshot = () => true;
-const getServerSnapshot = () => false;
-
 export default function LoginScreen() {
-  const mounted = useSyncExternalStore(emptySubscribe, getSnapshot, getServerSnapshot);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const login = useLoanStore((s) => s.login);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(password)) {
+    setSubmitting(true);
+    const success = await login(password);
+    setSubmitting(false);
+    if (success) {
       setError('');
     } else {
       setError('Wrong password. Try again.');
@@ -29,27 +28,6 @@ export default function LoginScreen() {
       setTimeout(() => setShake(false), 500);
     }
   };
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-sm">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
-              <Zap className="w-8 h-8 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">Loan Tracker</h1>
-            <p className="text-sm text-muted-foreground mt-1">50% Interest Loan Manager</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-6 neon-glow">
-            <div className="flex items-center justify-center py-8">
-              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -108,14 +86,15 @@ export default function LoginScreen() {
 
             <Button
               type="submit"
-              className="w-full bg-primary text-primary-foreground font-semibold hover:bg-neon-glow hover:shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-all"
+              disabled={submitting}
+              className="w-full bg-primary text-primary-foreground font-semibold hover:bg-neon-glow hover:shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-all disabled:opacity-60"
             >
-              Unlock
+              {submitting ? 'Unlocking...' : 'Unlock'}
             </Button>
           </form>
         </div>
 
-        <p className="text-center text-xs text-zinc-600 mt-6">Default password: loan2024</p>
+        <p className="text-center text-xs text-zinc-600 mt-6">Default password (unless APP_PASSWORD is set): loan2024</p>
       </div>
     </div>
   );
